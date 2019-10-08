@@ -120,12 +120,7 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
         </select>
       </div>
 
-      <div
-        id="main"
-        @scroll=${e => {
-          this.onScroll(e)
-        }}
-      >
+      <div id="main">
         ${this.creatable
           ? html`
               <font-creation-card class="card create" @create-font=${e => this.onCreateFont(e)}></font-creation-card>
@@ -161,7 +156,7 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
   }
 
   onClickRefresh() {
-    store.dispatch(fetchFontList({}))
+    store.dispatch(fetchFontList())
   }
 
   onCreateFont(e) {
