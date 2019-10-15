@@ -32,5 +32,7 @@
     "@things-factory/layout-base": "*",
     "@things-factory/shell": "*"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@things-factory/board-app": "*"
+  }
 }
