@@ -113,8 +113,18 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
           <label>${i18next.t('label.name')}</label>
           <input type="text" name="name" />
 
-          <label>${i18next.t('label.description')}</label>
-          <input type="text" name="description" />
+          <label>${i18next.t('label.provider')}</label>
+          <select name="provider">
+            <option value="google" selected>Google</option>
+            <option value="typekit">Typekit</option>
+            <option value="custom">Custom</option>
+          </select>
+
+          <label>${i18next.t('label.uri')}</label>
+          <input type="text" name="uri" />
+
+          <label>${i18next.t('label.active')}</label>
+          <input type="checkbox" name="active" />
 
           <input type="submit" value=${i18next.t('button.create')} />
         </form>
@@ -137,13 +147,17 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
     var form = e.target
 
     var name = form.elements['name'].value
-    var description = form.elements['description'].value
+    var provider = form.elements['provider'].value
+    var active = form.elements['active'].hasAttribute('checked')
+    var uri = form.elements['uri'].value
 
     this.dispatchEvent(
       new CustomEvent('create-font', {
         detail: {
           name,
-          description
+          provider,
+          active,
+          uri
         }
       })
     )
