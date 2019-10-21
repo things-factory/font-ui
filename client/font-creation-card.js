@@ -3,7 +3,25 @@ import { i18next, localize } from '@things-factory/i18n-base'
 
 export class FontCreationCard extends localize(i18next)(LitElement) {
   static get properties() {
-    return {}
+    return {
+      provider: {
+        type: String
+      },
+      fonts: {
+        type: Array
+      }
+    }
+  }
+
+  constructor() {
+    super()
+    this.provider = 'google'
+    this.providers = [
+      { value: 'google', display: 'Google' },
+      { value: 'typekit', display: 'Typekit' },
+      { value: 'custom', display: 'Custom' }
+    ]
+    this.fonts = []
   }
 
   static get styles() {
@@ -105,19 +123,36 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
   }
 
   render() {
+    let isProviderGoogle = this.provider == 'google'
     return html`
       <div @click=${e => this.onClickFlip(e)} front><mwc-icon>add_circle_outline</mwc-icon>create font</div>
 
       <div @click=${e => this.onClickFlip(e)} back>
         <form @submit=${e => this.onClickSubmit(e)}>
-          <label>${i18next.t('label.name')}</label>
-          <input type="text" name="name" />
-
           <label>${i18next.t('label.provider')}</label>
-          <select name="provider">
-            <option value="google" selected>Google</option>
-            <option value="typekit">Typekit</option>
-            <option value="custom">Custom</option>
+          <select
+            name="provider"
+            @change=${e => {
+              this.provider = e.target.value
+            }}
+          >
+            ${this.providers.map(
+              p =>
+                html`
+                  <option value=${p.value} ?selected=${this.provider == p.value}>${p.display}</option>
+                `
+            )}
+          </select>
+
+          <label>${i18next.t('label.name')}</label>
+          <input type="text" name="${isProviderGoogle ? '' : 'name'}" ?hidden=${isProviderGoogle} />
+          <select name="${isProviderGoogle ? 'name' : ''}" ?hidden=${!isProviderGoogle}>
+            ${this.fonts.map(
+              f =>
+                html`
+                  <option value=${f}>${f}</option>
+                `
+            )}
           </select>
 
           <label>${i18next.t('label.uri')}</label>
@@ -133,7 +168,12 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
   }
 
   onClickFlip(e) {
-    if (e.currentTarget.hasAttribute('front') || e.target.hasAttribute('back')) {
+    if (e.currentTarget.hasAttribute('front')) {
+      this.classList.toggle('flipped')
+      fetch(`/all-google-fonts`).then(async f => {
+        this.fonts = await f.json()
+      })
+    } else if (e.target.hasAttribute('back')) {
       this.classList.toggle('flipped')
     }
 
