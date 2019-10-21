@@ -1,3 +1,5 @@
 {
-  "label.module": "module"
+  "label.module": "module",
+  "label.uri": "URI",
+  "text.please choose a provider": "[ms]Please choose a provider"
 }
