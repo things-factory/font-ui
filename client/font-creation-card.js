@@ -7,7 +7,7 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
       provider: {
         type: String
       },
-      fonts: {
+      googleFonts: {
         type: Array
       }
     }
@@ -21,7 +21,7 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
       { value: 'typekit', display: 'Typekit' },
       { value: 'custom', display: 'Custom' }
     ]
-    this.fonts = []
+    this.googleFonts = []
   }
 
   static get styles() {
@@ -123,7 +123,7 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
   }
 
   render() {
-    let isProviderGoogle = this.provider == 'google'
+    let isProviderGoogle = this.provider == 'google' && this.googleFonts.length > 0
     return html`
       <div @click=${e => this.onClickFlip(e)} front><mwc-icon>add_circle_outline</mwc-icon>create font</div>
 
@@ -147,12 +147,13 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
           <label>${i18next.t('label.name')}</label>
           <input type="text" name="${isProviderGoogle ? '' : 'name'}" ?hidden=${isProviderGoogle} />
           <select name="${isProviderGoogle ? 'name' : ''}" ?hidden=${!isProviderGoogle}>
-            ${this.fonts.map(
-              f =>
-                html`
-                  <option value=${f}>${f}</option>
-                `
-            )}
+            ${isProviderGoogle &&
+              this.googleFonts.map(
+                f =>
+                  html`
+                    <option value=${f}>${f}</option>
+                  `
+              )}
           </select>
 
           <label>${i18next.t('label.uri')}</label>
@@ -170,8 +171,11 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
   onClickFlip(e) {
     if (e.currentTarget.hasAttribute('front')) {
       this.classList.toggle('flipped')
-      fetch(`/all-google-fonts`).then(async f => {
-        this.fonts = await f.json()
+      fetch(`/all-google-fonts`).then(async response => {
+        if (response.ok) this.googleFonts = await response.json()
+        else {
+          console.warn(`(${response.url}) ${response.status} ${response.statusText}. Could not load Google fonts.`)
+        }
       })
     } else if (e.target.hasAttribute('back')) {
       this.classList.toggle('flipped')
