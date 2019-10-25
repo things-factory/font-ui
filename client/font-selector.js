@@ -3,7 +3,7 @@ import '@things-factory/setting-base'
 import { css, html, LitElement } from 'lit-element'
 import { connect } from 'pwa-helpers/connect-mixin.js'
 
-import { store, ScrollbarStyles } from '@things-factory/shell'
+import { store, ScrollbarStyles, pulltorefresh } from '@things-factory/shell'
 import { fetchFontList, createFont, updateFont, deleteFont } from '@things-factory/font-base'
 import './font-creation-card'
 
@@ -17,6 +17,8 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
           grid-template-rows: auto auto 1fr;
           overflow: hidden;
           background-color: var(--popup-content-background-color);
+
+          position: relative;
         }
 
         #main {
@@ -104,7 +106,6 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
 
     return html`
       <div id="filter">
-        <mwc-icon @click=${e => this.onClickRefresh(e)}>refresh</mwc-icon>
         <select
           @change=${e => {
             this.provider = e.currentTarget.value
@@ -142,9 +143,25 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
     `
   }
 
+  firstUpdated() {
+    var list = this.shadowRoot.querySelector('#main')
+
+    pulltorefresh({
+      container: this.shadowRoot,
+      scrollable: list,
+      refresh: async () => {
+        return await this.refresh()
+      }
+    })
+  }
+
+  get creationCard() {
+    return this.shadowRoot.querySelector('font-creation-card')
+  }
+
   updated(changes) {
     if (changes.has('fonts')) {
-      var creationCard = this.shadowRoot.querySelector('font-creation-card')
+      var creationCard = this.creationCard
       if (creationCard) {
         creationCard.reset()
       }
@@ -155,7 +172,7 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
     this.fonts = state.font
   }
 
-  onClickRefresh() {
+  refresh() {
     store.dispatch(fetchFontList())
   }
 
