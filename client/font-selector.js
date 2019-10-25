@@ -149,8 +149,8 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
     pulltorefresh({
       container: this.shadowRoot,
       scrollable: list,
-      refresh: async () => {
-        return await this.refresh()
+      refresh: () => {
+        return this.refresh()
       }
     })
   }
@@ -173,7 +173,7 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
   }
 
   refresh() {
-    store.dispatch(fetchFontList())
+    return store.dispatch(fetchFontList())
   }
 
   onCreateFont(e) {
