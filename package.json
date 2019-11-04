@@ -33,6 +33,6 @@
     "@things-factory/shell": "^1.0.0-alpha.1"
   },
   "devDependencies": {
-    "@things-factory/board-app": "*"
+    "@things-factory/board-app": "^1.0.0-alpha.1"
   }
 }
