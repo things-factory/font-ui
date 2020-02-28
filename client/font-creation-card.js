@@ -166,10 +166,10 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
                   )}
               </select>
 
-              <!-- TODO implementing features using uri --
-              <label>${i18next.t('label.uri')}</label>
-              <input type="text" name="uri" />
-              -------------------------------------------->
+              <!-- TODO implementing features using uri -->
+              <label hidden>${i18next.t('label.uri')}</label>
+              <input hidden type="text" name="uri" />
+              <!------------------------------------------>
 
               <label>${i18next.t('label.active')}</label>
               <input type="checkbox" name="active" checked />
