@@ -1,0 +1,14 @@
+body {
+  --font-tools-background-color: var(--primary-color);
+  --font-selector-background-color: #fff;
+  --font-selector-name-font: bold 14px var(--theme-font);
+  --font-selector-border: 1px solid rgba(0, 0, 0, 0.2);
+  --font-selector-icon-size: 35px;
+  --font-selector-icon-font: normal 20px/35px var(--mdc-icon-font, 'Material Icons');
+  --font-selector-icon-color: var(--primary-color);
+  --font-selector-icon-background-color: rgba(255, 255, 255, 0.85);
+  --font-selector-etc-background-color: var(--primary-color);
+  --font-selector-etc-font: bold 9px var(--theme-font);
+  --font-selector-etc-icon-font: normal 72px var(--mdc-icon-font, 'Material Icons');
+  --font-selector-etc-icon-color: var(--secondary-color);
+}

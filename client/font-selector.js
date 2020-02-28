@@ -36,7 +36,7 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
           align-items: center;
           overflow: hidden;
           border-radius: var(--card-list-border-radius);
-          border: var(--attachment-selector-border);
+          border: var(--font-selector-border);
           background-color: var(--card-list-background-color);
 
           position: relative;
@@ -76,7 +76,7 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
 
         #filter {
           padding: var(--popup-content-padding);
-          background-color: var(--attachment-tools-background-color);
+          background-color: var(--font-tools-background-color);
           box-shadow: var(--box-shadow);
         }
 
