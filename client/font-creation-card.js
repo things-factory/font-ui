@@ -80,10 +80,17 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
         [back] {
           -webkit-transform: var(--card-list-flip-transform);
           transform: var(--card-list-flip-transform);
+          padding: var(--card-list-create-form-padding);
+          box-sizing: border-box;
+          display: grid;
         }
 
         [back] form {
-          padding: var(--card-list-create-form-padding);
+          display: grid;
+          grid-template-rows: 1fr auto;
+        }
+
+        [back] form .props {
           display: flex;
           flex-flow: row wrap;
         }
@@ -110,9 +117,9 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
           margin: var(--card-list-create-margin);
         }
 
-        input[type='submit'] {
+        [back] form input[type='submit'] {
+          width: 100%;
           background-color: var(--button-background-color) !important;
-          margin: var(--button-margin);
           font: var(--button-font);
           color: var(--button-color) !important;
           border-radius: var(--button-radius);
@@ -129,39 +136,43 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
 
       <div @click=${e => this.onClickFlip(e)} back>
         <form @submit=${e => this.onClickSubmit(e)}>
-          <label>${i18next.t('label.provider')}</label>
-          <select
-            name="provider"
-            @change=${e => {
-              this.provider = e.target.value
-            }}
-          >
-            ${this.providers.map(
-              p =>
-                html`
-                  <option value=${p.value} ?selected=${this.provider == p.value}>${p.display}</option>
-                `
-            )}
-          </select>
+          <div>
+            <div class="props">
+              <label>${i18next.t('label.provider')}</label>
+              <select
+                name="provider"
+                @change=${e => {
+                  this.provider = e.target.value
+                }}
+              >
+                ${this.providers.map(
+                  p =>
+                    html`
+                      <option value=${p.value} ?selected=${this.provider == p.value}>${p.display}</option>
+                    `
+                )}
+              </select>
 
-          <label>${i18next.t('label.name')}</label>
-          <input type="text" name="${isProviderGoogle ? '' : 'name'}" ?hidden=${isProviderGoogle} />
-          <select name="${isProviderGoogle ? 'name' : ''}" ?hidden=${!isProviderGoogle}>
-            ${isProviderGoogle &&
-              this.googleFonts.map(
-                f =>
-                  html`
-                    <option value=${f}>${f}</option>
-                  `
-              )}
-          </select>
+              <label>${i18next.t('label.name')}</label>
+              <input type="text" name="${isProviderGoogle ? '' : 'name'}" ?hidden=${isProviderGoogle} />
+              <select name="${isProviderGoogle ? 'name' : ''}" ?hidden=${!isProviderGoogle}>
+                ${isProviderGoogle &&
+                  this.googleFonts.map(
+                    f =>
+                      html`
+                        <option value=${f}>${f}</option>
+                      `
+                  )}
+              </select>
 
-          <label>${i18next.t('label.uri')}</label>
-          <input type="text" name="uri" />
+              <!-- TODO URI를 사용한 기능 구현 -->
+              <label hidden>${i18next.t('label.uri')}</label>
+              <input hidden type="text" name="uri" />
 
-          <label>${i18next.t('label.active')}</label>
-          <input type="checkbox" name="active" />
-
+              <label>${i18next.t('label.active')}</label>
+              <input type="checkbox" name="active" />
+            </div>
+          </div>
           <input type="submit" value=${i18next.t('button.create')} />
         </form>
       </div>
@@ -192,7 +203,7 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
 
     var name = form.elements['name'].value
     var provider = form.elements['provider'].value
-    var active = form.elements['active'].hasAttribute('checked')
+    var active = form.elements['active'].checked
     var uri = form.elements['uri'].value
 
     this.dispatchEvent(
