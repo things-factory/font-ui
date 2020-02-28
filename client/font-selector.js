@@ -49,6 +49,7 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
           display: flex;
           direction: rtl;
           flex-direction: column;
+          flex-wrap: wrap;
         }
 
         .card .button-container > mwc-icon {
