@@ -42,6 +42,34 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
           position: relative;
         }
 
+        .card .button-container {
+          width: 100%;
+          height: 100%;
+          position: absolute;
+          display: flex;
+          direction: rtl;
+          flex-direction: column;
+          opacity: 0;
+        }
+        .card .button-container:hover {
+          opacity: 1;
+        }
+
+        mwc-icon {
+          text-align: center;
+          border-radius: 100%;
+          width: var(--font-selector-icon-size);
+          height: var(--font-selector-icon-size);
+          font: var(--font-selector-icon-font);
+          color: var(--font-selector-icon-color);
+        }
+
+        mwc-icon:hover,
+        mwc-icon:active {
+          background-color: var(--primary-color);
+          color: #fff;
+        }
+
         #main .card.create {
           overflow: visible;
           background-color: initial;
@@ -136,6 +164,12 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
               </div>
               <div name>${font.name}</div>
               <div provider>${font.provider}</div>
+              <div class="button-container">
+                <mwc-icon @click=${e => this.toggleActive(font)}
+                  >${font.active ? 'check_box' : 'check_box_outline_blank'}</mwc-icon
+                >
+                <mwc-icon @click=${e => this.deleteOne(font)}>delete</mwc-icon>
+              </div>
             </div>
           `
         )}
@@ -180,6 +214,14 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
     var font = e.detail
 
     store.dispatch(createFont(font))
+  }
+
+  toggleActive(font) {
+    store.dispatch(updateFont({ id: font.id, active: !font.active }))
+  }
+
+  deleteOne(font) {
+    store.dispatch(deleteFont(font))
   }
 
   onClickSelect(font) {
