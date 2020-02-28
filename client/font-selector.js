@@ -43,29 +43,29 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
         }
 
         .card .button-container {
-          width: 100%;
-          height: 100%;
           position: absolute;
+          right: 0;
+          height: 100%;
           display: flex;
           direction: rtl;
           flex-direction: column;
-          opacity: 0;
-        }
-        .card .button-container:hover {
-          opacity: 1;
         }
 
-        mwc-icon {
+        .card .button-container > mwc-icon {
+          background-color: var(--font-selector-icon-background-color);
           text-align: center;
-          border-radius: 100%;
           width: var(--font-selector-icon-size);
           height: var(--font-selector-icon-size);
           font: var(--font-selector-icon-font);
           color: var(--font-selector-icon-color);
         }
 
-        mwc-icon:hover,
-        mwc-icon:active {
+        .card .button-container > mwc-icon:last-child {
+          border-bottom-left-radius: 12px;
+        }
+
+        .card .button-container > mwc-icon:hover,
+        .card .button-container > mwc-icon:active {
           background-color: var(--primary-color);
           color: #fff;
         }
