@@ -17,10 +17,10 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
     super()
     this.provider = 'google'
     this.providers = [
-      { value: 'google', display: 'Google' }
+      { value: 'google', display: 'Google' },
       // TODO 구글 외 폰트 서비스 구현
       // { value: 'typekit', display: 'Typekit' },
-      // { value: 'custom', display: 'Custom' }
+      { value: 'custom', display: 'Custom' }
     ]
     this.googleFonts = []
   }
@@ -167,8 +167,8 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
               </select>
 
               <!-- TODO implementing features using uri -->
-              <label hidden>${i18next.t('label.uri')}</label>
-              <input hidden type="text" name="uri" />
+              <label ?hidden=${this.provider != 'custom'}>${i18next.t('label.uri')}</label>
+              <input ?hidden=${this.provider != 'custom'} type="text" name="uri" />
               <!------------------------------------------>
 
               <label>${i18next.t('label.active')}</label>
