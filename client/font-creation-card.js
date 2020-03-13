@@ -1,5 +1,12 @@
 import { LitElement, html, css } from 'lit-element'
 import { i18next, localize } from '@things-factory/i18n-base'
+import { FileDropHelper } from '@things-factory/utils'
+
+var isAttachmentImported = false
+try {
+  require.resolve('@things-factory/attachment-ui')
+  isAttachmentImported = true
+} catch (e) {}
 
 export class FontCreationCard extends localize(i18next)(LitElement) {
   static get properties() {
@@ -39,6 +46,12 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
           transform-style: preserve-3d;
           -webkit-transition: all 0.5s ease-in-out;
           transition: all 0.5s ease-in-out;
+        }
+
+        :host(.candrop) [front],
+        :host(.candrop) [back] {
+          border-width: 2px;
+          background-color: #fffde9;
         }
 
         :host(.flipped) {
@@ -81,53 +94,77 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
         [back] {
           -webkit-transform: var(--card-list-flip-transform);
           transform: var(--card-list-flip-transform);
-          padding: var(--card-list-create-form-padding);
           box-sizing: border-box;
           display: grid;
         }
 
         [back] form {
+          padding: var(--card-list-create-form-padding);
+          width: 100%;
+          height: 100%;
+          box-sizing: border-box;
           display: grid;
-          grid-template-rows: 1fr auto;
+          grid-template-columns: 1fr;
+          grid-template-rows: auto 1fr auto;
+          justify-content: center;
+          align-items: center;
         }
 
         [back] form .props {
-          display: flex;
-          flex-flow: row wrap;
+          width: 100%;
+          height: 100%;
+          box-sizing: border-box;
+          display: grid;
+          grid-template-columns: repeat(10, 1fr);
+          grid-row-gap: 7px;
+          justify-content: center;
+          align-items: center;
         }
 
-        [back] form label {
-          flex: 1 1 25%;
+        [back] form .props label {
+          grid-column: span 4;
           font: var(--card-list-create-label-font);
           color: var(--card-list-create-label-color);
         }
 
-        [back] form input,
-        [back] form select {
-          flex: 1 1 60%;
-          width: 10px;
+        [back] form .props input,
+        [back] form .props select {
+          grid-column: span 6;
           background-color: #fff;
           border: var(--card-list-create-input-border);
           border-radius: var(--card-list-create-input-border-radius);
-          padding: var(--card-list-create-input-padding);
           font: var(--card-list-create-input-font);
           color: var(--card-list-create-input-color);
+          width: -moz-available;
         }
 
-        form * {
-          margin: var(--card-list-create-margin);
+        file-selector {
+          grid-column: span 6;
+          font: var(--card-list-create-input-font);
+          border: none;
+          box-sizing: border-box;
+          padding: 0;
         }
 
-        [back] form input[type='submit'] {
-          width: 100%;
+        [back] input[type='submit'] {
           background-color: var(--button-background-color) !important;
           font: var(--button-font);
           color: var(--button-color) !important;
           border-radius: var(--button-radius);
           border: var(--button-border);
+          grid-column: span 10;
+          grid-row: auto / -1;
+        }
+
+        .hidden {
+          display: none !important;
         }
       `
     ]
+  }
+
+  firstUpdated() {
+    FileDropHelper.set(this)
   }
 
   render() {
@@ -137,44 +174,70 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
 
       <div @click=${e => this.onClickFlip(e)} back>
         <form @submit=${e => this.onClickSubmit(e)}>
-          <div>
-            <div class="props">
-              <label>${i18next.t('label.provider')}</label>
-              <select
-                name="provider"
-                @change=${e => {
-                  this.provider = e.target.value
-                }}
-              >
-                ${this.providers.map(
-                  p =>
+          <div class="props">
+            <label>${i18next.t('label.provider')}</label>
+            <select
+              name="provider"
+              @change=${e => {
+                this.provider = e.target.value
+                if (e.target.value === 'google') {
+                  fetch(`/all-google-fonts`).then(async response => {
+                    if (response.ok) this.googleFonts = await response.json()
+                    else {
+                      console.warn(
+                        `(${response.url}) ${response.status} ${response.statusText}. Could not load Google fonts.`
+                      )
+                    }
+                  })
+                }
+              }}
+            >
+              ${this.providers.map(
+                p =>
+                  html`
+                    <option value=${p.value} ?selected=${this.provider == p.value}>${p.display}</option>
+                  `
+              )}
+            </select>
+
+            <label>${i18next.t('label.name')}</label>
+            <input type="text" name="${isProviderGoogle ? '' : 'name'}" ?hidden=${isProviderGoogle} />
+            <select name="${isProviderGoogle ? 'name' : ''}" ?hidden=${!isProviderGoogle}>
+              ${isProviderGoogle &&
+                this.googleFonts.map(
+                  f =>
                     html`
-                      <option value=${p.value} ?selected=${this.provider == p.value}>${p.display}</option>
+                      <option value=${f}>${f}</option>
                     `
                 )}
-              </select>
+            </select>
 
-              <label>${i18next.t('label.name')}</label>
-              <input type="text" name="${isProviderGoogle ? '' : 'name'}" ?hidden=${isProviderGoogle} />
-              <select name="${isProviderGoogle ? 'name' : ''}" ?hidden=${!isProviderGoogle}>
-                ${isProviderGoogle &&
-                  this.googleFonts.map(
-                    f =>
-                      html`
-                        <option value=${f}>${f}</option>
-                      `
-                  )}
-              </select>
+            <!-- TODO implementing features using uri -->
+            <label ?hidden=${this.provider != 'custom'}>${i18next.t('label.uri')}</label>
+            <input ?hidden=${this.provider != 'custom'} type="text" name="uri" />
+            <label ?hidden=${this.provider != 'custom' && isAttachmentImported}>${i18next.t('label.file')}</label>
+            <file-selector
+              class="${this.provider != 'custom' || !isAttachmentImported ? 'hidden' : ''}"
+              name="file"
+              label="${i18next.t('label.select file')}"
+              accept=".ttf,.woff,.woff2,.eot,.svg"
+              multiple
+              @file-change=${e => {
+                this.dispatchEvent(
+                  new CustomEvent('create-attachment', {
+                    detail: {
+                      files: Array.from(e.detail.files)
+                    }
+                  })
+                )
+              }}
+            ></file-selector>
+            <!------------------------------------------>
 
-              <!-- TODO implementing features using uri -->
-              <label ?hidden=${this.provider != 'custom'}>${i18next.t('label.uri')}</label>
-              <input ?hidden=${this.provider != 'custom'} type="text" name="uri" />
-              <!------------------------------------------>
-
-              <label>${i18next.t('label.active')}</label>
-              <input type="checkbox" name="active" checked />
-            </div>
+            <label>${i18next.t('label.active')}</label>
+            <input type="checkbox" name="active" checked />
           </div>
+          <div></div>
           <input type="submit" value=${i18next.t('button.create')} />
         </form>
       </div>
@@ -182,15 +245,11 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
   }
 
   onClickFlip(e) {
-    if (e.currentTarget.hasAttribute('front')) {
-      this.classList.toggle('flipped')
-      fetch(`/all-google-fonts`).then(async response => {
-        if (response.ok) this.googleFonts = await response.json()
-        else {
-          console.warn(`(${response.url}) ${response.status} ${response.statusText}. Could not load Google fonts.`)
-        }
-      })
-    } else if (e.target.hasAttribute('back')) {
+    if (
+      e.currentTarget.hasAttribute('front') ||
+      (e.currentTarget.hasAttribute('back') &&
+        !['INPUT', 'SELECT', 'OPTION'].find(tagName => tagName === e.target.tagName))
+    ) {
       this.classList.toggle('flipped')
     }
 

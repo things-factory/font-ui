@@ -21,6 +21,11 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
           position: relative;
         }
 
+        :host(.candrop) {
+          background: orange;
+          cursor: pointer;
+        }
+
         #main {
           overflow: auto;
           padding: var(--popup-content-padding);
@@ -153,7 +158,11 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
       <div id="main">
         ${this.creatable
           ? html`
-              <font-creation-card class="card create" @create-font=${e => this.onCreateFont(e)}></font-creation-card>
+              <font-creation-card
+                class="card create"
+                @create-font=${e => this.onCreateFont(e)}
+                @file-drop=${e => this.onAttachmentDropped(e)}
+              ></font-creation-card>
             `
           : html``}
         ${fonts.map(
@@ -225,6 +234,49 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
     var font = e.detail
 
     store.dispatch(createFont(font))
+  }
+
+  async onAttachmentDropped(e) {
+    var files = e.detail
+
+    await this.createAttachments('', files)
+  }
+  
+  async createAttachments(category, files) {
+    await client.mutate({
+      mutation: gql`
+        mutation($attachments: [NewAttachment]!) {
+          createAttachments(attachments: $attachments) {
+            path
+          }
+        }
+      `,
+      variables: {
+        attachments: files.map(file => {
+          return { category, file }
+        })
+      },
+      context: {
+        hasUpload: true
+      }
+    })
+  }
+
+  async deleteAttachment(id) {
+    const response = await client.mutate({
+      mutation: gql`
+        mutation DeleteAttachment($id: String!) {
+          deleteAttachment(id: $id) {
+            name
+          }
+        }
+      `,
+      variables: {
+        id
+      }
+    })
+
+    return response.data
   }
 
   toggleActive(font) {
