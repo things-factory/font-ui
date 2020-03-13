@@ -166,10 +166,20 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
               <div name>${font.name}</div>
               <div provider>${font.provider}</div>
               <div class="button-container">
-                <mwc-icon @click=${e => this.toggleActive(font)}
+                <mwc-icon
+                  @click=${e => {
+                    e.stopPropagation()
+                    this.toggleActive(font)
+                  }}
                   >${font.active ? 'check_box' : 'check_box_outline_blank'}</mwc-icon
                 >
-                <mwc-icon @click=${e => this.deleteOne(font)}>delete</mwc-icon>
+                <mwc-icon
+                  @click=${e => {
+                    e.stopPropagation()
+                    this.deleteOne(font)
+                  }}
+                  >delete</mwc-icon
+                >
               </div>
             </div>
           `
