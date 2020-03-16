@@ -1,12 +1,16 @@
 import { LitElement, html, css } from 'lit-element'
+import gql from 'graphql-tag'
+import { client } from '@things-factory/shell'
 import { i18next, localize } from '@things-factory/i18n-base'
 import { FileDropHelper } from '@things-factory/utils'
 
+// check if attachment module is imported
 var isAttachmentImported = false
 try {
   require.resolve('@things-factory/attachment-ui')
   isAttachmentImported = true
 } catch (e) {}
+//-------------------------------
 
 export class FontCreationCard extends localize(i18next)(LitElement) {
   static get properties() {
@@ -15,6 +19,9 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
         type: String
       },
       googleFonts: {
+        type: Array
+      },
+      _files: {
         type: Array
       }
     }
@@ -163,8 +170,8 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
     ]
   }
 
-  firstUpdated() {
-    FileDropHelper.set(this)
+  async firstUpdated() {
+    if (isAttachmentImported) FileDropHelper.set(this)
   }
 
   render() {
@@ -212,10 +219,10 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
                 )}
             </select>
 
-            <!-- TODO implementing features using uri -->
             <label ?hidden=${this.provider != 'custom'}>${i18next.t('label.uri')}</label>
             <input ?hidden=${this.provider != 'custom'} type="text" name="uri" />
-            <label ?hidden=${this.provider != 'custom' && isAttachmentImported}>${i18next.t('label.file')}</label>
+            <!-- display when attachment module is imported -->
+            <label ?hidden=${this.provider != 'custom' || !isAttachmentImported}>${i18next.t('label.file')}</label>
             <file-selector
               class="${this.provider != 'custom' || !isAttachmentImported ? 'hidden' : ''}"
               name="file"
@@ -223,16 +230,10 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
               accept=".ttf,.woff,.woff2,.eot,.svg"
               multiple
               @file-change=${e => {
-                this.dispatchEvent(
-                  new CustomEvent('create-attachment', {
-                    detail: {
-                      files: Array.from(e.detail.files)
-                    }
-                  })
-                )
+                this._files = Array.from(e.detail.files)
               }}
             ></file-selector>
-            <!------------------------------------------>
+            <!------------------------------------------------>
 
             <label>${i18next.t('label.active')}</label>
             <input type="checkbox" name="active" checked />
@@ -262,21 +263,20 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
 
     var form = e.target
 
-    var name = form.elements['name'].value
-    var provider = form.elements['provider'].value
-    var active = form.elements['active'].checked
-    var uri = form.elements['uri'].value
+    var detail = {}
+    detail.name = form.elements['name'].value
+    detail.provider = form.elements['provider'].value
+    detail.active = form.elements['active'].checked
+    if (this.provider === 'custom') {
+      detail.uri = form.elements['uri'].value
+    }
 
-    this.dispatchEvent(
-      new CustomEvent('create-font', {
-        detail: {
-          name,
-          provider,
-          active,
-          uri
-        }
-      })
-    )
+    if(this._files == true) {
+      // TODO 파일 첨부 되어있으면 첨부 후 URI 덮어씀
+
+    }
+
+    // this.dispatchEvent(new CustomEvent('create-font', { detail }))
   }
 
   reset() {
