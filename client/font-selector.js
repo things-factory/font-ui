@@ -1,9 +1,10 @@
+import gql from 'graphql-tag'
 import { i18next, localize } from '@things-factory/i18n-base'
 import '@things-factory/setting-base'
 import { css, html, LitElement } from 'lit-element'
 import { connect } from 'pwa-helpers/connect-mixin.js'
 
-import { store, ScrollbarStyles, pulltorefresh } from '@things-factory/shell'
+import { client, store, ScrollbarStyles, pulltorefresh } from '@things-factory/shell'
 import { fetchFontList, createFont, updateFont, deleteFont } from '@things-factory/font-base'
 import './font-creation-card'
 
@@ -233,7 +234,7 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
   }
   
   async createAttachments(category, files) {
-    await client.mutate({
+    return await client.mutate({
       mutation: gql`
         mutation($attachments: [NewAttachment]!) {
           createAttachments(attachments: $attachments) {
