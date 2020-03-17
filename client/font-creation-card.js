@@ -176,6 +176,7 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
 
   render() {
     let isProviderGoogle = this.provider == 'google' && this.googleFonts.length > 0
+    let isFileAttached = this._files.length > 0 ? true : false
     return html`
       <div @click=${e => this.onClickFlip(e)} front><mwc-icon>add_circle_outline</mwc-icon>create font</div>
 
@@ -220,7 +221,13 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
             </select>
 
             <label ?hidden=${this.provider != 'custom'}>${i18next.t('label.uri')}</label>
-            <input ?hidden=${this.provider != 'custom'} type="text" name="uri" />
+            <input
+              ?hidden=${this.provider != 'custom'}
+              ?disabled=${isFileAttached}
+              .value=${isFileAttached ? this._files[0].name : ''}
+              type="text"
+              name="uri"
+            />
             <!-- display when attachment module is imported -->
             <label ?hidden=${this.provider != 'custom' || !isAttachmentImported}>${i18next.t('label.file')}</label>
             <file-selector
@@ -246,18 +253,13 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
   }
 
   onClickFlip(e) {
-    if (
-      e.currentTarget.hasAttribute('front') ||
-      (e.currentTarget.hasAttribute('back') &&
-        !['INPUT', 'SELECT', 'OPTION'].find(tagName => tagName === e.target.tagName))
-    ) {
+    if (!['INPUT', 'SELECT', 'OPTION'].find(tagName => tagName === e.target.tagName)) {
+      if (e.currentTarget.hasAttribute('front')) this.reset() // 입력 폼으로 뒤집기 전에 한 번 리셋
       this.classList.toggle('flipped')
     }
-
-    e.stopPropagation()
   }
 
-  onClickSubmit(e) {
+  async onClickSubmit(e) {
     e.preventDefault()
     e.stopPropagation()
 
@@ -271,12 +273,49 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
       detail.uri = form.elements['uri'].value
     }
 
-    if(this._files == true) {
-      // TODO 파일 첨부 되어있으면 첨부 후 URI 덮어씀
-
+    if (this._files?.length > 0) {
+      let attachment = await this.attachFile(this._files[0], ['fullpath'])
+      detail.uri = attachment.data.attachment?.fullpath
     }
+    this.dispatchEvent(new CustomEvent('create-font', { detail }))
+  }
 
-    // this.dispatchEvent(new CustomEvent('create-font', { detail }))
+  /**
+   * call gql for attachment
+   *
+   * @param { File } file
+   * @param { Array } selector
+   */
+  async attachFile(file, selector) {
+    let attaching = await client.mutate({
+      mutation: gql`
+        mutation($attachment: NewAttachment!) {
+          createAttachment(attachment: $attachment) {
+            id
+          }
+        }
+      `,
+      variables: {
+        attachment: { category: '', file }
+      },
+      context: {
+        hasUpload: true
+      }
+    })
+    // TODO mutation 이후 query 호출 안 해도 되도록 수정
+    return await client.query({
+      query: gql`
+        query($id: String!) {
+          attachment(id: $id) {
+            id
+            ${selector.join('\n')}
+          }
+        }
+      `,
+      variables: {
+        id: attaching.data.createAttachment?.id
+      }
+    })
   }
 
   reset() {
@@ -285,6 +324,7 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
       form.reset()
     }
 
+    this._files = []
     this.classList.remove('flipped')
   }
 }
