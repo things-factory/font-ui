@@ -234,7 +234,7 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
               class="${this.provider != 'custom' || !isAttachmentImported ? 'hidden' : ''}"
               name="file"
               label="${i18next.t('label.select file')}"
-              accept=".ttf,.woff,.woff2,.eot,.svg"
+              accept=".ttf,.otf,.woff,.woff2,.eot,.svg,.svgz"
               multiple
               @file-change=${e => {
                 this._files = Array.from(e.detail.files)
@@ -275,19 +275,19 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
 
     if (this._files?.length > 0) {
       let attachment = await this.attachFile(this._files[0], ['fullpath'])
-      detail.uri = attachment.data.attachment?.fullpath
+      detail.uri = attachment?.fullpath
     }
     this.dispatchEvent(new CustomEvent('create-font', { detail }))
   }
 
   /**
-   * call gql for attachment
+   * attach a file
    *
-   * @param { File } file
-   * @param { Array } selector
+   * @param { File } file file
+   * @param { Array<String> } fields fields to select from return
    */
-  async attachFile(file, selector) {
-    let attaching = await client.mutate({
+  async attachFile(file, fields = []) {
+    var attaching = await client.mutate({
       mutation: gql`
         mutation($attachment: NewAttachment!) {
           createAttachment(attachment: $attachment) {
@@ -303,12 +303,13 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
       }
     })
     // TODO mutation 이후 query 호출 안 해도 되도록 수정
-    return await client.query({
+    // fullpath 값은 getter라서 그런지 뮤테이션에서 못 받아오는 듯
+    var attached = await client.query({
       query: gql`
         query($id: String!) {
           attachment(id: $id) {
             id
-            ${selector.join('\n')}
+            ${fields.join('\n')}
           }
         }
       `,
@@ -316,6 +317,54 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
         id: attaching.data.createAttachment?.id
       }
     })
+    return attached.data.attachment
+  }
+
+  /**
+   * attach multiple files
+   *
+   * @param { Array<File> } files files
+   * @param { Array<String> } fields fields to select from return
+   */
+  async attachFiles(files, fields = []) {
+    var attaching = await client.mutate({
+      mutation: gql`
+        mutation($attachments: [NewAttachment]!) {
+          createAttachments(attachments: $attachments) {
+            id
+          }
+        }
+      `,
+      variables: {
+        attachments: files.map(file => ({ category: '', file }))
+      },
+      context: {
+        hasUpload: true
+      }
+    })
+    // TODO mutation 이후 query 호출 안 해도 되도록 수정
+    // fullpath 값은 getter라서 그런지 뮤테이션에서 못 받아오는 듯
+    var attached = await client.query({
+      query: gql`
+        query($filters: [Filter]) {
+          attachments(filters: $filters) {
+            items {
+              id
+              ${fields.join('\n')}
+            }
+            total
+          }
+        }
+      `,
+      variables: {
+        filters: {
+          name: 'id',
+          operator: 'in',
+          value: attaching.data.createAttachments.map(attachment => attachment.id)
+        }
+      }
+    })
+    return attached.data.attachments.items
   }
 
   reset() {
