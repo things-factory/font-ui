@@ -1,10 +1,9 @@
-import gql from 'graphql-tag'
 import { i18next, localize } from '@things-factory/i18n-base'
 import '@things-factory/setting-base'
 import { css, html, LitElement } from 'lit-element'
 import { connect } from 'pwa-helpers/connect-mixin.js'
 
-import { client, store, ScrollbarStyles, pulltorefresh } from '@things-factory/shell'
+import { store, ScrollbarStyles, pulltorefresh } from '@things-factory/shell'
 import { fetchFontList, createFont, updateFont, deleteFont } from '@things-factory/font-base'
 import './font-creation-card'
 
@@ -238,46 +237,28 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
   }
 
   async onAttachmentDropped(e) {
-    var files = e.detail
+    var isNonFontIncluded = false
+    var files = e.detail.filter(file => {
+      var valid = ['.woff', '.woff2', '.eot', '.svg', '.svgz', '.ttf', '.otf'].find(ext => file.name.endsWith(ext))
+      if (!valid) isNonFontIncluded = true
+      return valid
+    })
+    // TODO alert if non-font file is included
 
-    await this.createAttachments('', files)
-  }
-  
-  async createAttachments(category, files) {
-    return await client.mutate({
-      mutation: gql`
-        mutation($attachments: [NewAttachment]!) {
-          createAttachments(attachments: $attachments) {
-            path
+    var card = this.creationCard
+    var attached = await card.attachFiles(files, ['name', 'fullpath'])
+    attached.forEach(attachment => {
+      card.dispatchEvent(
+        new CustomEvent('create-font', {
+          detail: {
+            name: attachment.name.replace(/\.[^/.]+$/, '').replace('.', '_'), // cannot apply font correctly if name includes '.'
+            provider: 'custom',
+            active: true,
+            uri: attachment.fullpath
           }
-        }
-      `,
-      variables: {
-        attachments: files.map(file => {
-          return { category, file }
         })
-      },
-      context: {
-        hasUpload: true
-      }
+      )
     })
-  }
-
-  async deleteAttachment(id) {
-    const response = await client.mutate({
-      mutation: gql`
-        mutation DeleteAttachment($id: String!) {
-          deleteAttachment(id: $id) {
-            name
-          }
-        }
-      `,
-      variables: {
-        id
-      }
-    })
-
-    return response.data
   }
 
   toggleActive(font) {
