@@ -2,8 +2,10 @@ import { i18next, localize } from '@things-factory/i18n-base'
 import '@things-factory/setting-base'
 import { css, html, LitElement } from 'lit-element'
 import { connect } from 'pwa-helpers/connect-mixin.js'
+import gql from 'graphql-tag'
+import uuid from 'uuid/v4'
 
-import { store, ScrollbarStyles, pulltorefresh } from '@things-factory/shell'
+import { store, client, ScrollbarStyles, pulltorefresh } from '@things-factory/shell'
 import { fetchFontList, createFont, updateFont, deleteFont } from '@things-factory/font-base'
 import './font-creation-card'
 
@@ -19,6 +21,11 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
           background-color: var(--popup-content-background-color);
 
           position: relative;
+        }
+
+        :host(.candrop) {
+          background: orange;
+          cursor: pointer;
         }
 
         #main {
@@ -153,7 +160,11 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
       <div id="main">
         ${this.creatable
           ? html`
-              <font-creation-card class="card create" @create-font=${e => this.onCreateFont(e)}></font-creation-card>
+              <font-creation-card
+                class="card create"
+                @create-font=${e => this.onCreateFont(e)}
+                @file-drop=${e => this.onAttachmentDropped(e)}
+              ></font-creation-card>
             `
           : html``}
         ${fonts.map(
@@ -176,7 +187,7 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
                 <mwc-icon
                   @click=${e => {
                     e.stopPropagation()
-                    this.deleteOne(font)
+                    this.deleteFont(font)
                   }}
                   >delete</mwc-icon
                 >
@@ -221,17 +232,167 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
     return store.dispatch(fetchFontList())
   }
 
-  onCreateFont(e) {
-    var font = e.detail
-
-    store.dispatch(createFont(font))
-  }
-
   toggleActive(font) {
     store.dispatch(updateFont({ id: font.id, active: !font.active }))
   }
 
-  deleteOne(font) {
+  onCreateFont(e) {
+    var font = e.detail
+    this.createFont(font)
+  }
+
+  async createFont(font) {
+    if (font._files?.length > 0) {
+      let attachment = await this.attachFile(font._files[0], ['fullpath', 'refBy'])
+      font.id = attachment?.refBy
+      font.uri = attachment?.fullpath
+      delete font._files
+    }
+
+    store.dispatch(createFont(font))
+  }
+
+  async onAttachmentDropped(e) {
+    var isNonFontIncluded = false
+    var files = e.detail.filter(file => {
+      var isFontFormat = !!['.woff', '.woff2', '.eot', '.svg', '.svgz', '.ttf', '.otf'].find(ext =>
+        file.name.endsWith(ext)
+      )
+      if (!isFontFormat) {
+        isNonFontIncluded = true
+        return false
+      }
+      var alreadyExist = !!this.fonts.find(font => font.name == file.name.replace(/\.[^/.]+$/, '').replace('.', '_'))
+      if (alreadyExist) return false
+      return true
+    })
+    // TODO alert if non-font file is included. ex) Non-font file is excluded in upload list.
+
+    if (files.length > 0) {
+      var attached = await this.attachFiles(files, ['name', 'fullpath', 'refBy'])
+      attached.forEach(attachment => {
+        this.createFont({
+          id: attachment.refBy,
+          name: attachment.name.replace(/\.[^/.]+$/, '').replace('.', '_'), // cannot apply font correctly if '.' exists in name
+          provider: 'custom',
+          active: true,
+          uri: attachment.fullpath
+        })
+      })
+    }
+  }
+
+  /**
+   * attach a file
+   *
+   * @param { File } file file
+   * @param { Array<String> } fields fields to select from return
+   */
+  async attachFile(file, fields = []) {
+    var attaching = await client.mutate({
+      mutation: gql`
+        mutation($attachment: NewAttachment!) {
+          createAttachment(attachment: $attachment) {
+            id
+          }
+        }
+      `,
+      variables: {
+        attachment: { refBy: uuid(), category: 'font', file }
+      },
+      context: {
+        hasUpload: true
+      }
+    })
+    // TODO mutation 이후 query 호출 안 해도 되도록 수정
+    // fullpath 값은 getter라서 그런지 뮤테이션에서 못 받아오는 듯
+    var attached = await client.query({
+      query: gql`
+        query($id: String!) {
+          attachment(id: $id) {
+            id
+            ${fields.join('\n')}
+          }
+        }
+      `,
+      variables: {
+        id: attaching.data.createAttachment?.id
+      }
+    })
+    return attached.data.attachment
+  }
+
+  /**
+   * attach multiple files
+   *
+   * @param { Array<File> } files files
+   * @param { Array<String> } fields fields to select from return
+   */
+  async attachFiles(files, fields = []) {
+    var attaching = await client.mutate({
+      mutation: gql`
+        mutation($attachments: [NewAttachment]!) {
+          createAttachments(attachments: $attachments) {
+            id
+          }
+        }
+      `,
+      variables: {
+        attachments: files.map(file => ({ refBy: uuid(), category: '', file }))
+      },
+      context: {
+        hasUpload: true
+      }
+    })
+    // TODO mutation 이후 query 호출 안 해도 되도록 수정
+    // fullpath 값은 getter라서 그런지 뮤테이션에서 못 받아오는 듯
+    var attached = await client.query({
+      query: gql`
+        query($filters: [Filter]) {
+          attachments(filters: $filters) {
+            items {
+              id
+              ${fields.join('\n')}
+            }
+            total
+          }
+        }
+      `,
+      variables: {
+        filters: {
+          name: 'id',
+          operator: 'in',
+          value: attaching.data.createAttachments.map(attachment => attachment.id)
+        }
+      }
+    })
+    return attached.data.attachments.items
+  }
+
+  async deleteFont(font) {
+    try {
+      require.resolve('@things-factory/attachment-ui')
+      client.mutate({
+        mutation: gql`
+          mutation($refBys: [String]!) {
+            deleteAttachmentsByRef(refBys: $refBys) {
+              id
+              name
+              description
+              mimetype
+              encoding
+              category
+              path
+              createdAt
+              updatedAt
+            }
+          }
+        `,
+        variables: {
+          refBys: font.id
+        }
+      })
+    } catch (e) {}
     store.dispatch(deleteFont(font))
   }
 
