@@ -2,8 +2,10 @@ import { i18next, localize } from '@things-factory/i18n-base'
 import '@things-factory/setting-base'
 import { css, html, LitElement } from 'lit-element'
 import { connect } from 'pwa-helpers/connect-mixin.js'
+import gql from 'graphql-tag'
+import uuid from 'uuid/v4'
 
-import { store, ScrollbarStyles, pulltorefresh } from '@things-factory/shell'
+import { store, client, ScrollbarStyles, pulltorefresh } from '@things-factory/shell'
 import { fetchFontList, createFont, updateFont, deleteFont } from '@things-factory/font-base'
 import './font-creation-card'
 
@@ -230,8 +232,22 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
     return store.dispatch(fetchFontList())
   }
 
+  toggleActive(font) {
+    store.dispatch(updateFont({ id: font.id, active: !font.active }))
+  }
+
   onCreateFont(e) {
     var font = e.detail
+    this.createFont(font)
+  }
+
+  async createFont(font) {
+    if (font._files?.length > 0) {
+      let attachment = await this.attachFile(font._files[0], ['fullpath', 'refBy'])
+      font.id = attachment?.refBy
+      font.uri = attachment?.fullpath
+      delete font._files
+    }
 
     store.dispatch(createFont(font))
   }
@@ -245,27 +261,132 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
     })
     // TODO alert if non-font file is included
 
-    var card = this.creationCard
-    var attached = await card.attachFiles(files, ['name', 'fullpath'])
+    var attached = await this.attachFiles(files, ['name', 'fullpath', 'refBy'])
     attached.forEach(attachment => {
-      card.dispatchEvent(
-        new CustomEvent('create-font', {
-          detail: {
-            name: attachment.name.replace(/\.[^/.]+$/, '').replace('.', '_'), // cannot apply font correctly if name includes '.'
-            provider: 'custom',
-            active: true,
-            uri: attachment.fullpath
-          }
-        })
-      )
+      this.createFont({
+        id: attachment.refBy,
+        name: attachment.name.replace(/\.[^/.]+$/, '').replace('.', '_'), // cannot apply font correctly if '.' exists in name
+        provider: 'custom',
+        active: true,
+        uri: attachment.fullpath
+      })
     })
   }
 
-  toggleActive(font) {
-    store.dispatch(updateFont({ id: font.id, active: !font.active }))
+  /**
+   * attach a file
+   *
+   * @param { File } file file
+   * @param { Array<String> } fields fields to select from return
+   */
+  async attachFile(file, fields = []) {
+    var attaching = await client.mutate({
+      mutation: gql`
+        mutation($attachment: NewAttachment!) {
+          createAttachment(attachment: $attachment) {
+            id
+          }
+        }
+      `,
+      variables: {
+        attachment: { refBy: uuid(), category: 'font', file }
+      },
+      context: {
+        hasUpload: true
+      }
+    })
+    // TODO mutation 이후 query 호출 안 해도 되도록 수정
+    // fullpath 값은 getter라서 그런지 뮤테이션에서 못 받아오는 듯
+    var attached = await client.query({
+      query: gql`
+        query($id: String!) {
+          attachment(id: $id) {
+            id
+            ${fields.join('\n')}
+          }
+        }
+      `,
+      variables: {
+        id: attaching.data.createAttachment?.id
+      }
+    })
+    return attached.data.attachment
   }
 
-  deleteOne(font) {
+  /**
+   * attach multiple files
+   *
+   * @param { Array<File> } files files
+   * @param { Array<String> } fields fields to select from return
+   */
+  async attachFiles(files, fields = []) {
+    var attaching = await client.mutate({
+      mutation: gql`
+        mutation($attachments: [NewAttachment]!) {
+          createAttachments(attachments: $attachments) {
+            id
+          }
+        }
+      `,
+      variables: {
+        attachments: files.map(file => ({ refBy: uuid(), category: '', file }))
+      },
+      context: {
+        hasUpload: true
+      }
+    })
+    // TODO mutation 이후 query 호출 안 해도 되도록 수정
+    // fullpath 값은 getter라서 그런지 뮤테이션에서 못 받아오는 듯
+    var attached = await client.query({
+      query: gql`
+        query($filters: [Filter]) {
+          attachments(filters: $filters) {
+            items {
+              id
+              ${fields.join('\n')}
+            }
+            total
+          }
+        }
+      `,
+      variables: {
+        filters: {
+          name: 'id',
+          operator: 'in',
+          value: attaching.data.createAttachments.map(attachment => attachment.id)
+        }
+      }
+    })
+    return attached.data.attachments.items
+  }
+
+  async deleteOne(font) {
+    // TODO 첨부 파일 함께 삭제
+    try {
+      require.resolve('@things-factory/attachment-ui')
+      await client.mutate({
+        mutation: gql`
+          mutation($refBys: [String]!) {
+            deleteAttachmentsByRef(refBys: $refBys) {
+              id
+              name
+              description
+              mimetype
+              encoding
+              category
+              path
+              createdAt
+              updatedAt
+            }
+          }
+        `,
+        variables: {
+          refBys: font.id
+        }
+      })
+    } catch (e) {
+      console.error(e)
+    }
     store.dispatch(deleteFont(font))
   }
 
