@@ -187,7 +187,7 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
                 <mwc-icon
                   @click=${e => {
                     e.stopPropagation()
-                    this.deleteOne(font)
+                    this.deleteFont(font)
                   }}
                   >delete</mwc-icon
                 >
@@ -255,22 +255,31 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
   async onAttachmentDropped(e) {
     var isNonFontIncluded = false
     var files = e.detail.filter(file => {
-      var valid = ['.woff', '.woff2', '.eot', '.svg', '.svgz', '.ttf', '.otf'].find(ext => file.name.endsWith(ext))
-      if (!valid) isNonFontIncluded = true
-      return valid
+      var isFontFormat = !!['.woff', '.woff2', '.eot', '.svg', '.svgz', '.ttf', '.otf'].find(ext =>
+        file.name.endsWith(ext)
+      )
+      if (!isFontFormat) {
+        isNonFontIncluded = true
+        return false
+      }
+      var alreadyExist = !!this.fonts.find(font => font.name == file.name.replace(/\.[^/.]+$/, '').replace('.', '_'))
+      if (alreadyExist) return false
+      return true
     })
-    // TODO alert if non-font file is included
+    // TODO alert if non-font file is included. ex) Non-font file is excluded in upload list.
 
-    var attached = await this.attachFiles(files, ['name', 'fullpath', 'refBy'])
-    attached.forEach(attachment => {
-      this.createFont({
-        id: attachment.refBy,
-        name: attachment.name.replace(/\.[^/.]+$/, '').replace('.', '_'), // cannot apply font correctly if '.' exists in name
-        provider: 'custom',
-        active: true,
-        uri: attachment.fullpath
+    if (files.length > 0) {
+      var attached = await this.attachFiles(files, ['name', 'fullpath', 'refBy'])
+      attached.forEach(attachment => {
+        this.createFont({
+          id: attachment.refBy,
+          name: attachment.name.replace(/\.[^/.]+$/, '').replace('.', '_'), // cannot apply font correctly if '.' exists in name
+          provider: 'custom',
+          active: true,
+          uri: attachment.fullpath
+        })
       })
-    })
+    }
   }
 
   /**
@@ -360,11 +369,10 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
     return attached.data.attachments.items
   }
 
-  async deleteOne(font) {
-    // TODO 첨부 파일 함께 삭제
+  async deleteFont(font) {
     try {
       require.resolve('@things-factory/attachment-ui')
-      await client.mutate({
+      client.mutate({
         mutation: gql`
           mutation($refBys: [String]!) {
             deleteAttachmentsByRef(refBys: $refBys) {
@@ -384,9 +392,7 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
           refBys: font.id
         }
       })
-    } catch (e) {
-      console.error(e)
-    }
+    } catch (e) {}
     store.dispatch(deleteFont(font))
   }
 
