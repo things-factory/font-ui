@@ -1,6 +1,6 @@
 {
   "name": "@things-factory/font-ui",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "main": "dist-server/index.js",
   "browser": "client/index.js",
   "things-factory": true,
@@ -28,6 +28,7 @@
     "migration:revert": "node ./node_modules/typeorm/cli.js migration:revert"
   },
   "dependencies": {
+    "@things-factory/attachment-ui": "^2.0.0",
     "@things-factory/font-base": "^2.0.0",
     "@things-factory/layout-base": "^2.0.0"
   },
