@@ -1,14 +1,7 @@
 import { LitElement, html, css } from 'lit-element'
 import { i18next, localize } from '@things-factory/i18n-base'
 import { FileDropHelper } from '@things-factory/utils'
-
-// check if attachment module is imported
-var isAttachmentImported = false
-try {
-  require.resolve('@things-factory/attachment-ui')
-  isAttachmentImported = true
-} catch (e) {}
-//-------------------------------
+import '@things-factory/attachment-ui'
 
 export class FontCreationCard extends localize(i18next)(LitElement) {
   static get properties() {
@@ -169,7 +162,7 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
   }
 
   async firstUpdated() {
-    if (isAttachmentImported) FileDropHelper.set(this)
+    FileDropHelper.set(this)
   }
 
   render() {
@@ -199,23 +192,14 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
               }}
             >
               ${this.providers.map(
-                p =>
-                  html`
-                    <option value=${p.value} ?selected=${this.provider == p.value}>${p.display}</option>
-                  `
+                p => html` <option value=${p.value} ?selected=${this.provider == p.value}>${p.display}</option> `
               )}
             </select>
 
             <label>${i18next.t('label.name')}</label>
             <input type="text" name="${isProviderGoogle ? '' : 'name'}" ?hidden=${isProviderGoogle} />
             <select name="${isProviderGoogle ? 'name' : ''}" ?hidden=${!isProviderGoogle}>
-              ${isProviderGoogle &&
-                this.googleFonts.map(
-                  f =>
-                    html`
-                      <option value=${f}>${f}</option>
-                    `
-                )}
+              ${isProviderGoogle && this.googleFonts.map(f => html` <option value=${f}>${f}</option> `)}
             </select>
 
             <label ?hidden=${this.provider != 'custom'}>${i18next.t('label.uri')}</label>
@@ -227,9 +211,9 @@ export class FontCreationCard extends localize(i18next)(LitElement) {
               name="uri"
             />
             <!-- display when attachment module is imported -->
-            <label ?hidden=${this.provider != 'custom' || !isAttachmentImported}>${i18next.t('label.file')}</label>
+            <label ?hidden=${this.provider != 'custom'}>${i18next.t('label.file')}</label>
             <file-selector
-              class="${this.provider != 'custom' || !isAttachmentImported ? 'hidden' : ''}"
+              class="${this.provider != 'custom' ? 'hidden' : ''}"
               name="file"
               label="${i18next.t('label.select file')}"
               accept=".ttf,.otf,.woff,.woff2,.eot,.svg,.svgz"

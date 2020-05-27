@@ -5,7 +5,9 @@ import { connect } from 'pwa-helpers/connect-mixin.js'
 import gql from 'graphql-tag'
 import uuid from 'uuid/v4'
 
-import { store, client, ScrollbarStyles, pulltorefresh } from '@things-factory/shell'
+import { store, client } from '@things-factory/shell'
+import { pulltorefresh } from '@things-factory/utils'
+import { ScrollbarStyles } from '@things-factory/styles'
 import { fetchFontList, createFont, updateFont, deleteFont } from '@things-factory/font-base'
 import './font-creation-card'
 
@@ -149,11 +151,7 @@ export class FontSelector extends localize(i18next)(connect(store)(LitElement)) 
           }}
         >
           <option value="">--${i18next.t('text.please choose a provider')}--</option>
-          ${['google', 'custom'].map(
-            provider => html`
-              <option value=${provider}>${provider}</option>
-            `
-          )}
+          ${['google', 'custom'].map(provider => html` <option value=${provider}>${provider}</option> `)}
         </select>
       </div>
 
