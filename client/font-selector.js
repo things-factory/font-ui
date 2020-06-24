@@ -1,5 +1,4 @@
 import { i18next, localize } from '@things-factory/i18n-base'
-import '@things-factory/setting-base'
 import { css, html, LitElement } from 'lit-element'
 import { connect } from 'pwa-helpers/connect-mixin.js'
 import gql from 'graphql-tag'
